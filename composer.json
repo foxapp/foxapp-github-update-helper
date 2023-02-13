@@ -1,0 +1,27 @@
+{
+    "name": "foxapp/foxapp-github-update-helper",
+    "description": "Wordpress Plugin Helper to connect your plugin with remote Git private repository for updating",
+    "type": "wordpress-plugin",
+    "keywords": ["foxapp", "github update"],
+    "homepage": "https://plugins.foxapp.net",
+    "require": {
+        "erusev/parsedown": "^1.7"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ion Enache",
+            "email": "enache.ion.vas@gmail.com",
+            "homepage": "https://www.foxapp.net"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "FoxApp\\GitHub\\": "Src/GitHub/",
+            "FoxApp\\GitHub\\Helper\\": "Src/GitHub/Helper/"
+        }
+    },
+    "config": {
+        "vendor-dir": "Lib"
+    }
+}
