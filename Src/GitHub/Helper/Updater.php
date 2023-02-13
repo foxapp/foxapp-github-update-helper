@@ -2,8 +2,6 @@
 
 namespace FoxApp\GitHub\Helper;
 
-use FoxApp\GitHub\Init;
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly.
 }
@@ -85,18 +83,6 @@ class Updater {
 		add_action( 'delete_site_transient_update_plugins', [ $this, 'delete_plugin_transients' ] );
 		add_filter( 'plugins_api', [ $this, 'plugins_api_filter' ], 10, 3 );
 
-		if ( isset( $_GET['debug'] ) ) {
-			$current = get_site_transient( 'update_plugins' );
-			echo '<pre>';
-			print_r( $current->checked );
-		}
-
-
-		//if( $this->plugin_slug  != 'foxapp-github-update-helper' ){
-		//	var_dump($this->plugin_slug);
-		//	die();
-		//}
-
 		//FIXME: Huivoznaiu cum lucreaza dar merge zaibisi, PS. nu are documentatie oficiala
 		remove_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), 'wp_plugin_update_row' );
 		add_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), [
@@ -118,9 +104,6 @@ class Updater {
 	}
 
 	public function show_update_notification( $file, $plugin ) {
-		var_dump($file);
-
-		die();
 		if ( is_network_admin() ) {
 			return;
 		}

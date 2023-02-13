@@ -1,7 +1,4 @@
 <?php
-//namespace FoxAppGitHubUpdateHelper\GitHub;
-
-//use FoxAppGitHubUpdateHelper\GitHub\Helper\Updater;
 namespace FoxApp\GitHub;
 
 use FoxApp\GitHub\Helper\Updater;
@@ -51,6 +48,7 @@ class Init {
 		$this->processed_plugin_file = $file;
 		$this->parent_page_slug      = basename( $file, ".php" );
 		$this->parent_page_real_slug = plugin_basename( $file );
+
 
 		//Notify users to use only private repositories
 		if ( isset( $_GET['page'] ) && $_GET['page'] === $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) {
@@ -112,7 +110,30 @@ class Init {
 			100
 		);
 
+
+		add_filter( 'plugin_action_links_'.$this->parent_page_real_slug, [$this, 'github_helper_settings_link'] );
+		add_filter( 'plugin_row_meta', [$this, 'github_helper_additional_link'], 10, 4 );
+
 		//include_once plugin_dir_path( $this->processed_plugin_file ) . 'fox-app-github-update-helper/GitHub/Helper/Updater.php';
+	}
+
+	function github_helper_settings_link( $links_array ){
+		array_unshift( $links_array, '<a href="'.$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN.'">'.__('GitHub Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN).'</a>' );
+		$links_array[] = '<a href="https://plugins.foxapp.net/'.$this->parent_page_slug .'/faq">'.__('FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN).'</a>';
+		//$links_array[] = '<a>Support</a>';
+		//$links_array[] = '<a>Check for updates</a>';
+		return $links_array;
+	}
+
+	function github_helper_additional_link( $plugin_meta, $plugin_file_name, $plugin_data, $status ){
+        if( $this->parent_page_real_slug === $plugin_file_name ) {
+	        $row_meta = [
+		        'changelog' => '<a href="" title="' . esc_attr( esc_html__( 'GitHub Update Helper Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) ) . '" target="_blank">' . esc_html__( 'Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>',
+	        ];
+	        $plugin_meta = array_merge( $plugin_meta, $row_meta );
+        }
+
+		return $plugin_meta;
 	}
 
 	public function admin_notice_use_private_repositories_only(): void {
