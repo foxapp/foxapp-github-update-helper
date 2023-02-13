@@ -69,6 +69,8 @@ class Updater {
 
 		//$this->extract_plugin_data();//Get Data from plugin you want to update
 
+		$this->change_log = '';
+
 
 		$this->setup_helper_hooks();
 		$this->core_update_delete_transients();
@@ -83,11 +85,17 @@ class Updater {
 		add_action( 'delete_site_transient_update_plugins', [ $this, 'delete_plugin_transients' ] );
 		add_filter( 'plugins_api', [ $this, 'plugins_api_filter' ], 10, 3 );
 
-		/*
+		if ( isset( $_GET['debug'] ) ) {
 			$current = get_site_transient( 'update_plugins' );
-			//echo '<pre>';
-			//print_r($current);
-		*/
+			echo '<pre>';
+			print_r( $current->checked );
+		}
+
+
+		//if( $this->plugin_slug  != 'foxapp-github-update-helper' ){
+		//	var_dump($this->plugin_slug);
+		//	die();
+		//}
 
 		//FIXME: Huivoznaiu cum lucreaza dar merge zaibisi, PS. nu are documentatie oficiala
 		remove_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), 'wp_plugin_update_row' );
@@ -110,6 +118,9 @@ class Updater {
 	}
 
 	public function show_update_notification( $file, $plugin ) {
+		var_dump($file);
+
+		die();
 		if ( is_network_admin() ) {
 			return;
 		}
@@ -122,9 +133,10 @@ class Updater {
 			return;
 		}
 
-		if ( $this->plugin_real_slug !== $file ) {
-			return;
-		}
+		//var_dump($this->plugin_real_slug, $file);die();
+		//if ( $this->plugin_real_slug !== $file ) {
+		//	return;
+		//}
 
 		// Remove our filter on the site transient
 		remove_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_update' ] );
@@ -135,6 +147,30 @@ class Updater {
 
 		// Restore our filter
 		add_filter( 'pre_set_site_transient_update_plugins', [ $this, 'check_update' ] );
+	}
+
+	protected function get_transient( $cache_key ) {
+		$cache_data = get_option( $cache_key );
+
+		if ( empty( $cache_data['timeout'] ) || current_time( 'timestamp' ) > $cache_data['timeout'] ) {
+			// Cache is expired.
+			return false;
+		}
+
+		return $cache_data['value'];
+	}
+
+	protected function set_transient( $cache_key, $value, $expiration = 0 ) {
+		if ( empty( $expiration ) ) {
+			$expiration = strtotime( '+12 hours', current_time( 'timestamp' ) );
+		}
+
+		$data = [
+			'timeout' => $expiration,
+			'value'   => $value,
+		];
+
+		update_option( $cache_key, $data, 'no' );
 	}
 
 	private function clean_get_version_cache(): void {
@@ -188,7 +224,11 @@ class Updater {
 		}
 
 		//// If we have checked the plugin data before, don't re-check
-		//if ( empty( $transient_data->checked ) || ! isset( $transient_data->checked[ $this->slug ] ) ) {
+		//var_dump( $transient_data->checked, $transient_data->checked[ $this->plugin_slug ] );
+		//die();
+		//if ( empty( $transient_data->checked ) || ! isset( $transient_data->checked[ $this->plugin_slug ] ) ) {
+		//	var_dump($transient_data);
+		//	die();
 		//	return $transient_data;
 		//}
 
@@ -199,15 +239,21 @@ class Updater {
 		$remote_version_info = (object) API::get_repo_release_info(
 			$this->github_username,
 			$this->github_repository,
+			$this->github_authorize_token,
 			$this->transient_key_prefix,
-			false
+			false /* Use Cache */
 		);
+
+		if ( isset( $_GET['debug'] ) ) {
+			echo '<pre>';
+			print_r( $transient_data );
+		}
 
 		$plugin_info = (object) [
 			'id'           => $this->plugin_slug,
-			'slug'         => $this->plugin_real_slug,
-			'new_version'  => $this->check_version_name( $remote_version_info->new_version ?? '' ),
-			'version'      => $this->check_version_name( $remote_version_info->new_version ?? '' ),
+			'slug'         => $this->plugin_slug,
+			'new_version'  => $this->check_version_name( $remote_version_info->new_version ?? 0 ),
+			'version'      => $this->check_version_name( $this->plugin_version ),
 			'url'          => $remote_version_info->website_url ?? '',
 			'package'      => $remote_version_info->download_link ?? '',
 			'requires'     => $remote_version_info->requires ?? '',
@@ -215,12 +261,18 @@ class Updater {
 			'requires_php' => $remote_version_info->requires_php ?? '',
 		];
 
-		if ( version_compare( $this->plugin_version, $this->check_version_name( $remote_version_info->new_version??'0' ), '<' ) ) {
+		if ( version_compare( $this->plugin_version, $plugin_info->new_version, '<' ) ) {
 			$transient_data->response[ $this->plugin_real_slug ] = $plugin_info;
-			$transient_data->checked[ $this->plugin_real_slug ]  = $this->check_version_name( $remote_version_info->new_version??'0' );
+			$transient_data->checked[ $this->plugin_real_slug ]  = $plugin_info->new_version;
 		} else {
 			$transient_data->no_update[ $this->plugin_real_slug ] = $plugin_info;
 			$transient_data->checked[ $this->plugin_real_slug ]   = $this->plugin_version;
+		}
+
+		if ( isset( $_GET['debug'] ) ) {
+			echo '<br><br><br>';
+			print_r( $transient_data );
+			die();
 		}
 
 		$transient_data->last_checked = current_time( 'timestamp' );
@@ -239,7 +291,7 @@ class Updater {
 			return $data;
 		}
 
-		if ( ! isset( $args->slug ) || ( $args->slug !== $this->plugin_real_slug ) ) {
+		if ( ! isset( $args->slug ) || ( $args->slug !== $this->plugin_slug ) ) {
 			return $data;
 		}
 
@@ -247,7 +299,7 @@ class Updater {
 
 		//$this->get_repo_release_info();
 
-		$cache_key = 'fox_app_github_update_helper_api_request_' . substr( md5( serialize( $this->plugin_slug ) ), 0, 15 );
+		$cache_key = 'remote_api_request_' . substr( md5( serialize( $this->plugin_slug ) ), 0, 15 );
 
 		$api_request_transient = get_site_transient( $cache_key );
 
@@ -256,17 +308,16 @@ class Updater {
 				$this->github_username,
 				$this->github_repository,
 				$this->github_authorize_token,
-				$this->transient_key_prefix,
-				false
+				$this->transient_key_prefix
 			);
 
-			var_dump($api_response);
+			//var_dump($api_response);
 
 			$api_request_transient = new \stdClass();
 
 			// Add our plugin information
 			$api_request_transient->name         = $this->plugin_data['Name'];
-			$api_request_transient->slug         = $this->plugin_real_slug;
+			$api_request_transient->slug         = $this->plugin_slug;
 			$api_request_transient->last_updated = $api_response->creation;
 			$api_request_transient->plugin_name  = $this->plugin_data["Name"];
 			$api_request_transient->author       = $this->plugin_data["AuthorName"];

@@ -83,7 +83,7 @@ class Init {
 				'github_host'            => 'https://api.github.com',
 				'github_username'        => get_option( $this->github_updater_username_option_key ),
 				'github_authorize_token' => get_option( $this->github_updater_authorize_token_option_key ),
-				'github_repository'      => get_option( $this->github_updater_authorize_token_option_key )
+				'github_repository'      => get_option( $this->github_updater_repository_option_key )
 			);
 
 			new Updater( $github_helper_plugin );

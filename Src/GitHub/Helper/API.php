@@ -13,8 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class API extends Init {
 
 	// Requests lock config.
-	const REQUEST_LOCK_TTL = MINUTE_IN_SECONDS;
-	const REQUEST_LOCK_OPTION_NAME = '_fox_app_github_update_helper_api_requests_lock';
+	const REQUEST_LOCK_TTL = 0;//MINUTE_IN_SECONDS
+	const REQUEST_LOCK_OPTION_NAME = 'remote_api_requests_lock';
 	public static array $transient_data = [];
 
 	public function __construct( $file ) {
@@ -33,7 +33,7 @@ class API extends Init {
 				$remote_repository
 			);
 
-			if ( self::is_request_running( 'get_repo_release_info' ) ) {
+			if ( self::is_request_running( 'get_repo_release_info', md5($remote_repository) ) ) {
 				return new \WP_Error( esc_html__( 'Another check is in progress.', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) );
 			}
 
@@ -44,7 +44,6 @@ class API extends Init {
 
 		return $current_info_data;
 	}
-
 
 	public static function set_transient( $cache_key, $value, $expiration = '+12 hours' ) {
 		$data = [
@@ -58,16 +57,17 @@ class API extends Init {
 		}
 	}
 
-	public static function is_request_running( $name ): bool {
-		$requests_lock = get_option( self::REQUEST_LOCK_OPTION_NAME, [] );
-		if ( isset( $requests_lock[ $name ] ) ) {
-			if ( $requests_lock[ $name ] > time() - self::REQUEST_LOCK_TTL ) {
+	public static function is_request_running( $name , $dynamic_key) {
+		$requests_lock = get_option( self::REQUEST_LOCK_OPTION_NAME.$dynamic_key, [] );
+
+		if ( isset( $requests_lock[ $name.$dynamic_key ] ) ) {
+			if ( $requests_lock[ $name.$dynamic_key ] > time() - self::REQUEST_LOCK_TTL ) {
 				return true;
 			}
 		}
 
-		$requests_lock[ $name ] = time();
-		update_option( self::REQUEST_LOCK_OPTION_NAME, $requests_lock );
+		$requests_lock[ $name.$dynamic_key ] = time();
+		update_option( self::REQUEST_LOCK_OPTION_NAME.$dynamic_key, $requests_lock );
 
 		return false;
 	}
@@ -107,10 +107,13 @@ class API extends Init {
 			$response = current( $response );
 			$response = json_decode( json_encode( $response ), true );
 		}
+		//echo '<pre>';
+		//print_r($response);
+		//die();
 
 		$new_response = [];
 
-		$new_response['new_version']   = $response['tag_name'];
+		$new_response['new_version']   = self::check_version_name($response['tag_name']);
 		$new_response['creation']      = date( 'Y-m-d H:i:s', strtotime( $response['published_at'] ) );
 		$new_response['download_link'] = add_query_arg( 'access_token', $authorize_token, $response['zipball_url'] );
 		$new_response['branch']        = $response['target_commitish'];
@@ -124,6 +127,12 @@ class API extends Init {
 		$new_response['requires_php'] = '7.0';
 
 		return $new_response;
+	}
+
+	public static function check_version_name( $version ): array|string {
+		$arr = [ 'v', 'v.', 'ver', 'ver.' ];
+
+		return str_replace( $arr, '', $version );
 	}
 
 	private static function get_transient( $cache_key ) {

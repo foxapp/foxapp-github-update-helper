@@ -4,7 +4,7 @@
 Plugin Name: FoxApp GitHub Update Helper
 Plugin URI: https://plugins.foxapp.net/foxapp-github-update-helper
 Description: With this plugin, developers can keep information about their projects privately on the GitHub up to date.
-Version: 1.0.0
+Version: 1.0.1
 Author: FoxApp
 Author URI: https://plugins.foxapp.net/
 Requires at least: 6.0
