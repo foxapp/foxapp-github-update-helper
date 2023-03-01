@@ -246,7 +246,7 @@ class Updater {
 		return $transient_data;
 	}
 
-	public function check_version_name( $version ): array|string {
+	public function check_version_name( $version ) {
 		$arr = [ 'v', 'v.', 'ver', 'ver.' ];
 
 		return str_replace( $arr, '', $version );
