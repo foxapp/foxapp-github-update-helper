@@ -13,11 +13,11 @@ define( 'FOX_APP_GITHUB_UPDATE_HELPER', __return_true() );
 define( 'FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN', 'foxapp-github-update-helper' );
 
 class Init {
-	public mixed $processed_plugin_file;
-	public mixed $parent_page_slug;
-	public mixed $parent_page_real_slug;
-	public mixed $plugin_identifier;
-	public mixed $transient_key_prefix;
+	public string $processed_plugin_file;
+	public string $parent_page_slug;
+	public string $parent_page_real_slug;
+	public string $plugin_identifier;
+	public string $transient_key_prefix;
 
 	/*
 
