@@ -1,4 +1,5 @@
 <?php
+
 namespace FoxApp\GitHub;
 
 use FoxApp\GitHub\Helper\Updater;
@@ -9,7 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 //Define constant for current plugin
 define( 'FOX_APP_GITHUB_UPDATE_HELPER', __return_true() );
-define( 'FOX_APP_GITHUB_UPDATE_HELPER_VERSION', '1.0.0' );
 define( 'FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN', 'foxapp-github-update-helper' );
 
 class Init {
@@ -37,6 +37,12 @@ class Init {
 	public string $github_updater_enabled_option_key;
 
 	public function __construct( $file ) {
+		if ( ! function_exists( 'get_plugin_data' ) ) {
+			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
+		}
+
+		if(!defined('FOX_APP_GITHUB_UPDATE_HELPER_VERSION'))
+			define( 'FOX_APP_GITHUB_UPDATE_HELPER_VERSION', get_plugin_data( $file )["Version"] );
 
 		//define( 'FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_FILE', $file );
 		//define( 'FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_SLUG', basename( $file, ".php" ) );
@@ -111,27 +117,29 @@ class Init {
 		);
 
 
-		add_filter( 'plugin_action_links_'.$this->parent_page_real_slug, [$this, 'github_helper_settings_link'] );
-		add_filter( 'plugin_row_meta', [$this, 'github_helper_additional_link'], 10, 4 );
+		add_filter( 'plugin_action_links_' . $this->parent_page_real_slug, [ $this, 'github_helper_settings_link' ] );
+		add_filter( 'plugin_row_meta', [ $this, 'github_helper_additional_link' ], 10, 4 );
 
 		//include_once plugin_dir_path( $this->processed_plugin_file ) . 'fox-app-github-update-helper/GitHub/Helper/Updater.php';
 	}
 
-	function github_helper_settings_link( $links_array ){
-		array_unshift( $links_array, '<a href="'.$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN.'">'.__('GitHub Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN).'</a>' );
-		$links_array[] = '<a href="https://plugins.foxapp.net/'.$this->parent_page_slug .'/faq">'.__('FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN).'</a>';
-		//$links_array[] = '<a>Support</a>';
-		//$links_array[] = '<a>Check for updates</a>';
+	function github_helper_settings_link( $links_array ) {
+
+		array_unshift( $links_array,'<a href="https://plugins.local/wp-admin/admin.php?page=' . $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN . '">' . __( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
+        array_unshift( $links_array,'<a href="https://plugins.local/wp-admin/admin.php?page=' . $this->parent_page_slug .'">' . __( 'Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
+
+        $links_array[] = '<a href="https://plugins.foxapp.net/' . $this->parent_page_slug . '/faq">' . __( 'FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>';
+
 		return $links_array;
 	}
 
-	function github_helper_additional_link( $plugin_meta, $plugin_file_name, $plugin_data, $status ){
-        if( $this->parent_page_real_slug === $plugin_file_name ) {
-	        $row_meta = [
-		        'changelog' => '<a href="" title="' . esc_attr( esc_html__( 'GitHub Update Helper Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) ) . '" target="_blank">' . esc_html__( 'Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>',
-	        ];
-	        $plugin_meta = array_merge( $plugin_meta, $row_meta );
-        }
+	function github_helper_additional_link( $plugin_meta, $plugin_file_name, $plugin_data, $status ) {
+		if ( $this->parent_page_real_slug === $plugin_file_name ) {
+			$row_meta    = [
+				'changelog' => '<a href="" title="' . esc_attr( esc_html__( 'GitHub Update Helper Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) ) . '" target="_blank">' . esc_html__( 'Changelog', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>',
+			];
+			$plugin_meta = array_merge( $plugin_meta, $row_meta );
+		}
 
 		return $plugin_meta;
 	}

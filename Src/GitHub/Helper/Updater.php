@@ -27,10 +27,7 @@ class Updater {
 	public mixed $github_authorize_token;
 	private mixed $response_transient_key;
 	private mixed $transient_key_prefix;
-	/*----*/
-	public mixed $real_slug;
 	public mixed $slug;
-	public mixed $github_response;
 	public mixed $download_link;
 	public mixed $change_log;
 
@@ -39,12 +36,7 @@ class Updater {
 			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 		}
 
-		//require_once( plugin_dir_path( FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_FILE ) . 'fox-app-github-update-helper/GitHub/Helper/ParseCodeDown.php' );
-		//require_once( plugin_dir_path( FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_FILE ) . 'fox-app-github-update-helper/GitHub/Helper/Api.php' );
-
 		//Current Plugin Info which want to be updated
-		//var_dump($plugin_file);
-		//die();
 		$this->plugin_file          = $plugin_file['plugin_file'];
 		$this->plugin_slug          = $plugin_file['plugin_slug'];
 		$this->plugin_real_slug     = $plugin_file['plugin_real_slug'];
@@ -61,19 +53,10 @@ class Updater {
 		//Helper Settings
 		$this->response_transient_key = md5( sanitize_key( $this->plugin_slug ) . 'response_transient' );
 
-		//$this->slug        = plugin_basename( $this->plugin_file );
-		//$this->real_slug   = $this->get_slug_name( $this->slug );
-		//$this->plugin_data = get_plugin_data( $this->plugin_file );
-
-		//$this->extract_plugin_data();//Get Data from plugin you want to update
-
 		$this->change_log = '';
-
 
 		$this->setup_helper_hooks();
 		$this->core_update_delete_transients();
-
-		//add_filter( "pre_set_site_transient_update_plugins", array( $this, "github_set_transient" ) );
 
 		return false;
 	}

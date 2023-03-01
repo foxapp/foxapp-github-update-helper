@@ -107,9 +107,6 @@ class API extends Init {
 			$response = current( $response );
 			$response = json_decode( json_encode( $response ), true );
 		}
-		//echo '<pre>';
-		//print_r($response);
-		//die();
 
 		$new_response = [];
 
@@ -119,7 +116,7 @@ class API extends Init {
 		$new_response['branch']        = $response['target_commitish'];
 
 		//FIXME:: Add this feature on next release
-		$new_response['website_url']  = 'website_url';
+		$new_response['website_url']  = $response['html_url'];
 		$new_response['type']         = 'github-plugin';
 		$new_response['body']         = $response['body'];
 		$new_response['requires']     = '6.0';
