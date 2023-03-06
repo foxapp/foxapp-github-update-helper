@@ -21,7 +21,7 @@ class API extends Init {
 		parent::__construct( $file );
 	}
 
-	public static function get_repo_release_info( $remote_username, $remote_repository, $remote_key, $transient_key, $force_check = true ): \WP_Error|array {
+	public static function get_repo_release_info( $remote_username, $remote_repository, $remote_key, $transient_key, $force_check = true ) { //Fixes for PHP 8 => : \WP_Error|array
 		$transient_cache_key = $transient_key . FOX_APP_GITHUB_UPDATE_HELPER_VERSION;
 		$current_info_data   = get_transient( $transient_cache_key );
 
@@ -72,7 +72,7 @@ class API extends Init {
 		return false;
 	}
 
-	private static function remote_request( $remote_url, $authorize_token ): \WP_Error|array {
+	private static function remote_request( $remote_url, $authorize_token ) {//PHP 8 => : \WP_Error|array
 
 		$args = [
 			'headers'   => [
@@ -126,7 +126,7 @@ class API extends Init {
 		return $new_response;
 	}
 
-	public static function check_version_name( $version ): array|string {
+	public static function check_version_name( $version ) { //PHP 8 => : array|string
 		$arr = [ 'v', 'v.', 'ver', 'ver.' ];
 
 		return str_replace( $arr, '', $version );

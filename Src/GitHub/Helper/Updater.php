@@ -13,23 +13,23 @@ class Updater {
 	//public mixed $file;
 	//public mixed $plugin;
 	//public mixed $basename;
-	public mixed $plugin_active;
+	public string $plugin_active;
 	/*----*/
-	public mixed $plugin_version;
-	public mixed $plugin_file;
-	public mixed $plugin_name;
-	public mixed $plugin_slug;
-	public mixed $plugin_data;
+	public string $plugin_version;
+	public string $plugin_file;
+	public string $plugin_name;
+	public string $plugin_slug;
+	public array $plugin_data;
 	public bool $plugin_activated;
-	public mixed $plugin_real_slug;
-	public mixed $github_username;
-	public mixed $github_repository;
-	public mixed $github_authorize_token;
-	private mixed $response_transient_key;
-	private mixed $transient_key_prefix;
-	public mixed $slug;
-	public mixed $download_link;
-	public mixed $change_log;
+	public string $plugin_real_slug;
+	public string $github_username;
+	public string $github_repository;
+	public string $github_authorize_token;
+	private string $response_transient_key;
+	private string $transient_key_prefix;
+	public string $slug;
+	public string $download_link;
+	public string $change_log;
 
 	public function __construct( $plugin_file ) {
 		if ( ! function_exists( 'get_plugin_data' ) ) {
@@ -161,6 +161,7 @@ class Updater {
 		}
 	}
 
+	/*
 	public function get_slug_name( $slug ) {
 		if ( str_contains( $slug, '/' ) ) {
 			$pos  = strpos( $slug, '/' );
@@ -169,6 +170,7 @@ class Updater {
 
 		return $slug;
 	}
+	*/
 
 	public function check_update( $transient_data ) {
 		global $pagenow;
@@ -314,7 +316,9 @@ class Updater {
 					if ( count( $matches ) > 0 ) {
 						$change_log = '<p>';
 						foreach ( $matches[0] as $match ) {
-							if ( str_contains( $match, '##' ) ) {
+							//Fixes for PHP 8.0
+							//if ( str_contains( $match, '##' ) ) {
+							if ( strpos($match, '##') !== false ) {
 								if ( $count > 0 ) {
 									$change_log .= '<br>';
 								}
