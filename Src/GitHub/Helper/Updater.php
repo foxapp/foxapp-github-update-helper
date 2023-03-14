@@ -220,6 +220,7 @@ class Updater {
 		$plugin_info = (object) [
 			'id'           => $this->plugin_slug,
 			'slug'         => $this->plugin_slug,
+			'type'         => 'plugin',
 			'new_version'  => $this->check_version_name( $remote_version_info->new_version ?? 0 ),
 			'version'      => $this->check_version_name( $this->plugin_version ),
 			'url'          => $remote_version_info->website_url ?? '',
