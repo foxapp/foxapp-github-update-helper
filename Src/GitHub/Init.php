@@ -125,8 +125,8 @@ class Init {
 
 	function github_helper_settings_link( $links_array ) {
 
-		array_unshift( $links_array,'<a href="https://plugins.local/wp-admin/admin.php?page=' . $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN . '">' . __( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
-        array_unshift( $links_array,'<a href="https://plugins.local/wp-admin/admin.php?page=' . $this->parent_page_slug .'">' . __( 'Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
+		array_unshift( $links_array,'<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN . '">' . __( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
+        array_unshift( $links_array,'<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug .'">' . __( 'Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
 
         $links_array[] = '<a href="https://plugins.foxapp.net/' . $this->parent_page_slug . '/faq">' . __( 'FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>';
 
