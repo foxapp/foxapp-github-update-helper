@@ -36,13 +36,23 @@ class Init {
 	public string $github_updater_repository_option_key;
 	public string $github_updater_enabled_option_key;
 
-	public function __construct( $file ) {
+	private static $_this;
+
+	public function __construct( $file, $master = false ) {
+		/*
+		// Don't allow more than one instance of the class
+		if ( isset( self::$_this ) ) {
+			wp_die( sprintf( esc_html__( '%s is a singleton class, adnd you cannot create a second instance.', 'et-core' ),
+					get_class( $this ) )
+			);
+		}
+
+		self::$_this = $this;
+		*/
+
 		if ( ! function_exists( 'get_plugin_data' ) ) {
 			require_once( ABSPATH . 'wp-admin/includes/plugin.php' );
 		}
-
-		if(!defined('FOX_APP_GITHUB_UPDATE_HELPER_VERSION'))
-			define( 'FOX_APP_GITHUB_UPDATE_HELPER_VERSION', get_plugin_data( $file )["Version"] );
 
 		//define( 'FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_FILE', $file );
 		//define( 'FOX_APP_GITHUB_UPDATE_HELPER_PLUGIN_SLUG', basename( $file, ".php" ) );
@@ -53,6 +63,11 @@ class Init {
 
 		$this->processed_plugin_file = $file;
 		$this->parent_page_slug      = basename( $file, ".php" );
+
+		if ( $this->parent_page_slug === FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) {
+			define( 'FOX_APP_GITHUB_UPDATE_HELPER_VERSION', get_plugin_data( $file )["Version"] );
+		}
+
 		$this->parent_page_real_slug = plugin_basename( $file );
 
 
@@ -96,7 +111,10 @@ class Init {
 
 	public function plugin_settings(): void {
 
-		if ( $this->parent_page_slug === FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) {
+		//var_dump( $this->parent_page_slug . '=' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN );
+
+		if ( $this->parent_page_slug === FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) {//&& $_GET['page'] === $this->parent_page_slug
+
 			add_menu_page(
 				__( 'GitHub Update Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
 				__( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
@@ -104,19 +122,24 @@ class Init {
 				$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN,
 				array( $this, 'render_plugin_settings_administration' ),
 			);
-		}
 
-		add_submenu_page(
-			$this->parent_page_slug,
-			__( 'GitHub Update Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
-			__( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
-			'manage_options',
-			$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN,
-			array( $this, 'render_plugin_settings_administration' ),
-			100
-		);
+		}else {
+			add_submenu_page(
+				$this->parent_page_slug,
+				__( 'GitHub Update Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
+				__( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
+				'manage_options',
+				'foxapp-richprize-casino-api/foxapp-github-update-helper',
+				//$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN,
+				[ $this, 'render_plugin_settings_administration' ]
+			);
+        }
 
 
+
+		/*
+		/*
+		*/
 		add_filter( 'plugin_action_links_' . $this->parent_page_real_slug, [ $this, 'github_helper_settings_link' ] );
 		add_filter( 'plugin_row_meta', [ $this, 'github_helper_additional_link' ], 10, 4 );
 
@@ -125,10 +148,10 @@ class Init {
 
 	function github_helper_settings_link( $links_array ) {
 
-		array_unshift( $links_array,'<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN . '">' . __( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
-        array_unshift( $links_array,'<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug .'">' . __( 'Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>');
+		array_unshift( $links_array, '<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN . '">' . __( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>' );
+		array_unshift( $links_array, '<a href="/wp-admin/admin.php?page=' . $this->parent_page_slug . '">' . __( 'Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>' );
 
-        $links_array[] = '<a href="https://plugins.foxapp.net/' . $this->parent_page_slug . '/faq">' . __( 'FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>';
+		//$links_array[] = '<a href="https://plugins.foxapp.net/' . $this->parent_page_slug . '/faq">' . __( 'FAQ', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) . '</a>';
 
 		return $links_array;
 	}
@@ -212,11 +235,10 @@ class Init {
 			do_action( 'admin_notices_saved_options' );
 		}
 
-		//Get plugin settings from database
-		$github_updater_username        = get_option( $this->github_updater_username_option_key ) ?? '';
-		$github_updater_authorize_token = get_option( $this->github_updater_authorize_token_option_key ) ?? '';
-		$github_updater_repository      = get_option( $this->github_updater_repository_option_key ) ?? '';
-		$github_updater_enabled         = get_option( $this->github_updater_enabled_option_key ) ?? 0;
+		$github_updater_username        = get_option( $this->github_updater_username_option_key, '' );
+		$github_updater_authorize_token = get_option( $this->github_updater_authorize_token_option_key, '' );
+		$github_updater_repository      = get_option( $this->github_updater_repository_option_key, '' );
+		$github_updater_enabled         = (bool) get_option( $this->github_updater_enabled_option_key, 0 );
 		?>
 
         <form method="post" action="">

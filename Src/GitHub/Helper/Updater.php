@@ -30,6 +30,10 @@ class Updater {
 	public string $slug;
 	public string $download_link;
 	public string $change_log;
+	/**
+	 * @var mixed|string
+	 */
+	public $plugin_text_domain;
 
 	public function __construct( $plugin_file ) {
 		if ( ! function_exists( 'get_plugin_data' ) ) {
@@ -44,6 +48,7 @@ class Updater {
 		$this->plugin_data          = get_plugin_data( $this->plugin_file );
 		$this->plugin_name          = $this->plugin_data['Name'] ?? '';
 		$this->plugin_version       = $this->plugin_data['Version'] ?? '';
+		$this->plugin_text_domain   = $this->plugin_data['TextDomain'] ?? '';
 
 		//GitHub Settings for Remote Request
 		$this->github_username        = $plugin_file['github_username'];
@@ -57,8 +62,6 @@ class Updater {
 
 		$this->setup_helper_hooks();
 		$this->core_update_delete_transients();
-
-		return false;
 	}
 
 	private function setup_helper_hooks() {
@@ -67,23 +70,90 @@ class Updater {
 		add_filter( 'plugins_api', [ $this, 'plugins_api_filter' ], 10, 3 );
 
 		//FIXME: Huivoznaiu cum lucreaza dar merge zaibisi, PS. nu are documentatie oficiala
-		remove_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), 'wp_plugin_update_row' );
-		add_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), [
-			$this,
-			'show_update_notification'
-		], 10, 2 );
+		//remove_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), 'wp_plugin_update_row' );
+		//add_action( 'after_plugin_row_' . str_replace( '-', '_', $this->plugin_slug ), [
+		//	$this,
+		//	'show_update_notification'
+		//], 10, 2 );
 
+
+		add_filter( "http_request_args", array( $this, "github_request_args" ), 10, 2 );
 		add_filter( "upgrader_post_install", array( $this, "github_post_install" ), 10, 3 );
 		add_filter( "upgrader_pre_install", array( $this, "github_pre_install" ), 10, 3 );
-		add_filter( "http_request_args", array( $this, "github_request_args" ), 10, 2 );
+		//////////add_filter( 'upgrader_post_install', array( $this, "modify_plugin_update_message" ), 10, 4 );
 
-		add_action( 'update_option_WPLANG', function () {
-			$this->clean_get_version_cache();
-		} );
+		//add_filter('update_feedback', [$this, 'modify_plugin_update_feedback'], 10, 3);
 
-		add_action( 'upgrader_process_complete', function () {
-			$this->clean_get_version_cache();
-		} );
+		add_action( 'upgrader_process_complete', [ $this, 'display_custom_updated_message' ], 10, 2 );
+
+
+		//add_filter( 'plugin_row_meta', [ $this, 'plugin_row_meta' ], 10, 2 );
+
+
+		//FIXME: On future to add api hook to record plugin version updated
+		//add_action( 'upgrader_process_complete', function ( $upgrader_object, $hook_extra ) {
+		//	$this->clean_get_version_cache( $upgrader_object, $hook_extra );
+		//}, 10, 2 );
+		/**/
+	}
+
+	public function display_custom_updated_message( $upgrader_object, $options ) {
+		// Check if it's a plugin update
+		if ( $options['action'] === 'update' && $options['type'] === 'plugin' ) {
+			// Check if it's your plugin being updated
+			if ( in_array( 'your-plugin-folder/your-plugin-file.php', $options['plugins'] ) ) {
+				// Display custom "Updated!" message
+				echo 'Updated plugin with success!';
+			}
+		}
+	}
+
+	public function modify_plugin_update_feedback( $feedback, $upgrader, $hook_extra ) {
+		var_dump( $feedback, $upgrader, $hook_extra );
+		die();
+		if ( $hook_extra['action'] === 'update-plugin' ) {
+			// Modify the feedback message
+			$feedback['response'] = 'Custom update response message';
+			$feedback['error']    = true; // Optionally, set error to true or false based on your needs
+		}
+
+		return $feedback;
+	}
+
+	public function modify_plugin_update_message( $upgrader_object, $options ) {
+
+		var_dump( $upgrader_object, $options );
+		die();
+		if ( $options['action'] === 'update' && $options['type'] === 'plugin' ) {
+			// Specify the plugin slug and the new version number
+			$plugin_slug = 'your-plugin-slug';
+			$new_version = '1.0.1';
+
+			// Modify the update message for the plugin
+			$plugin_data            = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_slug . '/' . $plugin_slug . '.php', false, false );
+			$plugin_data['Version'] = $new_version;
+			update_option( 'plugin_' . $plugin_slug, $plugin_data );
+		}
+	}
+
+	public function plugin_row_meta( $plugin_meta, $plugin_file ) {
+		if ( $this->plugin_real_slug === $plugin_file ) {
+			$plugin_slug = $this->plugin_slug;
+			$plugin_name = esc_html__( 'Elementor Pro', 'elementor-pro' );
+
+			$row_meta    = [
+				'view-details' => sprintf( '<a href="%s" class="thickbox open-plugin-details-modal" aria-label="%s" data-title="%s">%s</a>',
+					esc_url( network_admin_url( 'plugin-install.php?tab=plugin-information&plugin=' . $this->plugin_slug . '&TB_iframe=true&width=600&height=550' ) ),
+					esc_attr( sprintf( esc_html__( 'More information about %s', $this->plugin_text_domain ), $this->plugin_name ) ),
+					esc_attr( $this->plugin_name ),
+					__( 'View details new', $this->plugin_text_domain )
+				),
+				//'changelog' => '<a href="https://go.elementor.com/pro-changelog/" title="' . esc_attr( esc_html__( 'View Elementor Pro Changelog', $this->plugin_text_domain ) ) . '" target="_blank">' . esc_html__( 'Changelog', $this->plugin_text_domain ) . '</a>',
+			];
+			$plugin_meta = array_merge( $plugin_meta, $row_meta );
+		}
+
+		return $plugin_meta;
 	}
 
 	public function show_update_notification( $file, $plugin ) {
@@ -99,7 +169,7 @@ class Updater {
 			return;
 		}
 
-		//var_dump($this->plugin_real_slug, $file);die();
+
 		//if ( $this->plugin_real_slug !== $file ) {
 		//	return;
 		//}
@@ -139,8 +209,35 @@ class Updater {
 		update_option( $cache_key, $data, 'no' );
 	}
 
-	private function clean_get_version_cache(): void {
+	private function clean_get_version_cache( $upgrader_object = null, $options = null ): void {
 		$transient_cache_key = $this->transient_key_prefix;
+
+		if ( $options['action'] !== 'update' && $options['type'] !== 'plugin' && ! isset( $options['plugins'] ) ) {
+			return;
+		}
+		// Get the plugin file name
+		$plugin_slug = $options['plugins'][0];
+
+		// Specify the new version you want to set
+		$new_version = '1.2.3';
+
+		// Check if the updated plugin is your plugin
+		if ( $plugin_slug === $this->plugin_real_slug ) {//'my-plugin-folder/my-plugin.php'
+
+			// Update the plugin version number in the header information
+			$plugin_data               = get_plugin_data( WP_PLUGIN_DIR . '/' . $plugin_slug );
+			$plugin_data['Version']    = $new_version;//$this->plugin_version
+			$plugin_data['newVersion'] = $new_version;
+			$this_plugin               = array( $plugin_slug => $plugin_data );
+			update_option( 'plugin_' . $plugin_slug, $plugin_data );
+
+			//// Update the plugin version number in the readme.txt file
+			//$readme_file = WP_PLUGIN_DIR . '/' . $this->plugin_slug . '/readme.txt';
+
+			//$readme_content     = file_get_contents( $readme_file );
+			//$new_readme_content = preg_replace( '/Stable tag: (.*)/', 'Stable tag: 1.2.0', $readme_content ); // Replace with your new version number
+			//file_put_contents( $readme_file, $new_readme_content );
+		}
 
 		delete_option( $transient_cache_key );
 	}
@@ -186,13 +283,14 @@ class Updater {
 		return $this->check_transient_data( $transient_data );
 	}
 
+
 	public function check_transient_data( $transient_data ) {
 		if ( ! is_object( $transient_data ) ) {
 			$transient_data = new \stdClass();
 		}
 
 		//// If we have checked the plugin data before, don't re-check
-		//var_dump( $transient_data->checked, $transient_data->checked[ $this->plugin_slug ] );
+		//var_dump( $this->plugin_real_slug, $transient_data->checked, $transient_data->checked[ $this->plugin_real_slug ] );
 		//die();
 		//if ( empty( $transient_data->checked ) || ! isset( $transient_data->checked[ $this->plugin_slug ] ) ) {
 		//	var_dump($transient_data);
@@ -201,7 +299,7 @@ class Updater {
 		//}
 
 		// default - don't update the plugin
-		$do_update = 0;
+		//$do_update = 0;
 
 		// Get plugin & GitHub release information
 		$remote_version_info = (object) API::get_repo_release_info(
@@ -209,7 +307,8 @@ class Updater {
 			$this->github_repository,
 			$this->github_authorize_token,
 			$this->transient_key_prefix,
-			false /* Use Cache */
+			false /* Use Cache */,
+			$this->check_version_name( $this->plugin_version )
 		);
 
 		if ( isset( $_GET['debug'] ) ) {
@@ -220,6 +319,7 @@ class Updater {
 		$plugin_info = (object) [
 			'id'           => $this->plugin_slug,
 			'slug'         => $this->plugin_slug,
+			'plugin'       => $this->plugin_real_slug,
 			'type'         => 'plugin',
 			'new_version'  => $this->check_version_name( $remote_version_info->new_version ?? 0 ),
 			'version'      => $this->check_version_name( $this->plugin_version ),
@@ -227,16 +327,22 @@ class Updater {
 			'package'      => $remote_version_info->download_link ?? '',
 			'requires'     => $remote_version_info->requires ?? '',
 			'tested'       => $remote_version_info->tested ?? '',
-			'requires_php' => $remote_version_info->requires_php ?? '',
+			'requires_php' => $remote_version_info->requires_php ?? ''
 		];
 
 		if ( version_compare( $this->plugin_version, $plugin_info->new_version, '<' ) ) {
-			$transient_data->response[ $this->plugin_real_slug ] = $plugin_info;
-			$transient_data->checked[ $this->plugin_real_slug ]  = $plugin_info->new_version;
+			$transient_data->response[ $this->plugin_real_slug ]              = $plugin_info;
+			$transient_data->response[ $this->plugin_real_slug ]->new_version = $plugin_info->new_version;
+			$transient_data->checked[ $this->plugin_real_slug ]               = $plugin_info->new_version;
 		} else {
 			$transient_data->no_update[ $this->plugin_real_slug ] = $plugin_info;
 			$transient_data->checked[ $this->plugin_real_slug ]   = $this->plugin_version;
 		}
+
+		//echo '<pre>';
+		//$plugin = plugin_basename( sanitize_text_field( wp_unslash( $this->plugin_real_slug ) ) );
+		//print_r($plugin);
+		//echo '</pre>'.PHP_EOL;
 
 		if ( isset( $_GET['debug'] ) ) {
 			echo '<br><br><br>';
@@ -264,46 +370,41 @@ class Updater {
 			return $data;
 		}
 
-		// Get plugin & GitHub release information
-
-		//$this->get_repo_release_info();
-
 		$cache_key = 'remote_api_request_' . substr( md5( serialize( $this->plugin_slug ) ), 0, 15 );
 
+		// Get plugin & GitHub release information
 		$api_request_transient = get_site_transient( $cache_key );
 
 		if ( empty( $api_request_transient ) ) {
-			$api_response = (object) API::get_repo_release_info(
+			$api_response          = (object) API::get_repo_release_info(
 				$this->github_username,
 				$this->github_repository,
 				$this->github_authorize_token,
-				$this->transient_key_prefix
+				$this->transient_key_prefix,
+				true,
+				$this->check_version_name( $this->plugin_version )
 			);
-
-			//var_dump($api_response);
-
 			$api_request_transient = new \stdClass();
 
 			// Add our plugin information
-			$api_request_transient->name         = $this->plugin_data['Name'];
-			$api_request_transient->slug         = $this->plugin_slug;
-			$api_request_transient->last_updated = $api_response->creation;
-			$api_request_transient->plugin_name  = $this->plugin_data["Name"];
-			$api_request_transient->author       = $this->plugin_data["AuthorName"];
-			$api_request_transient->requires     = $api_response->requires;
-			$api_request_transient->tested       = $api_response->tested;
-			$api_request_transient->branch       = $api_response->branch;
-			$api_request_transient->homepage     = "https://plugins.foxapp.net/" . $this->plugin_slug;
-
-
+			$api_request_transient->name          = $this->plugin_data['Name'];
+			$api_request_transient->slug          = $this->plugin_slug;
+			$api_request_transient->last_updated  = $api_response->creation;
+			$api_request_transient->plugin_name   = $this->plugin_data["Name"];
+			$api_request_transient->author        = $this->plugin_data["AuthorName"];
+			$api_request_transient->requires      = $api_response->requires;
+			$api_request_transient->tested        = $api_response->tested;
+			$api_request_transient->branch        = $api_response->branch;
+			$api_request_transient->homepage      = "https://plugins.foxapp.net/" . $this->plugin_slug;
 			$api_request_transient->version       = $this->check_version_name( $api_response->new_version );
+			$api_request_transient->new_version   = $this->check_version_name( $api_response->new_version );
 			$api_request_transient->last_updated  = $api_response->last_updated ?? '';
 			$api_request_transient->download_link = $api_response->download_link;
 
 			//FIXME: Fix banners they are from Elementor
 			$api_request_transient->banners = [
-				'high' => 'https://www.foxblog.net/plugins/fox-app-github-update-helper/assets/banner-1544x500.png',
-				'low'  => 'https://www.foxblog.net/plugins/fox-app-github-update-helper/assets/banner-1544x500.png',
+				'high' => plugins_url( $this->plugin_slug . '/banners/high.png' ),
+				'low'  => plugins_url( $this->plugin_slug . '/banners/low.png' ),
 			];
 
 			// Create tabs in the lightbox
@@ -319,7 +420,7 @@ class Updater {
 						foreach ( $matches[0] as $match ) {
 							//Fixes for PHP 8.0
 							//if ( str_contains( $match, '##' ) ) {
-							if ( strpos($match, '##') !== false ) {
+							if ( strpos( $match, '##' ) !== false ) {
 								if ( $count > 0 ) {
 									$change_log .= '<br>';
 								}
@@ -366,7 +467,9 @@ class Updater {
 			//$api_request_transient->sections = unserialize( $api_response['sections']??'' );
 
 			// Expires in 1 day
-			set_site_transient( $cache_key, $api_request_transient, DAY_IN_SECONDS );
+			//set_site_transient( $cache_key, $api_request_transient, DAY_IN_SECONDS );
+			// Set the transient data to enable the update process
+			set_site_transient( 'update_plugins', [ $this->plugin_slug => $api_request_transient ] );
 
 		}
 

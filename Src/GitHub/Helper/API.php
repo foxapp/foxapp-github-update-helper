@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class API extends Init {
 
 	// Requests lock config.
-	const REQUEST_LOCK_TTL = 0;//MINUTE_IN_SECONDS
+	const REQUEST_LOCK_TTL = MINUTE_IN_SECONDS;
 	const REQUEST_LOCK_OPTION_NAME = 'remote_api_requests_lock';
 	public static array $transient_data = [];
 
@@ -21,7 +21,7 @@ class API extends Init {
 		parent::__construct( $file );
 	}
 
-	public static function get_repo_release_info( $remote_username, $remote_repository, $remote_key, $transient_key, $force_check = true ) { //Fixes for PHP 8 => : \WP_Error|array
+	public static function get_repo_release_info( $remote_username, $remote_repository, $remote_key, $transient_key, $force_check = true, $current_version = '1.0.0' ) { //Fixes for PHP 8 => : \WP_Error|array
 		$transient_cache_key = $transient_key . FOX_APP_GITHUB_UPDATE_HELPER_VERSION;
 		$current_info_data   = get_transient( $transient_cache_key );
 
@@ -33,11 +33,11 @@ class API extends Init {
 				$remote_repository
 			);
 
-			if ( self::is_request_running( 'get_repo_release_info', md5($remote_repository) ) ) {
+			if ( self::is_request_running( 'get_repo_release_info', md5( $remote_repository ) ) ) {
 				return new \WP_Error( esc_html__( 'Another check is in progress.', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ) );
 			}
 
-			$current_info_data = self::remote_request( $remote_url, $remote_key );
+			$current_info_data = self::remote_request( $remote_url, $remote_key, $current_version );
 
 			self::set_transient( $transient_cache_key, $current_info_data );
 		}
@@ -57,22 +57,22 @@ class API extends Init {
 		}
 	}
 
-	public static function is_request_running( $name , $dynamic_key) {
-		$requests_lock = get_option( self::REQUEST_LOCK_OPTION_NAME.$dynamic_key, [] );
+	public static function is_request_running( $name, $dynamic_key ) {
+		$requests_lock = get_option( self::REQUEST_LOCK_OPTION_NAME . $dynamic_key, [] );
 
-		if ( isset( $requests_lock[ $name.$dynamic_key ] ) ) {
-			if ( $requests_lock[ $name.$dynamic_key ] > time() - self::REQUEST_LOCK_TTL ) {
+		if ( isset( $requests_lock[ $name . $dynamic_key ] ) ) {
+			if ( $requests_lock[ $name . $dynamic_key ] > time() - self::REQUEST_LOCK_TTL ) {
 				return true;
 			}
 		}
 
-		$requests_lock[ $name.$dynamic_key ] = time();
-		update_option( self::REQUEST_LOCK_OPTION_NAME.$dynamic_key, $requests_lock );
+		$requests_lock[ $name . $dynamic_key ] = time();
+		update_option( self::REQUEST_LOCK_OPTION_NAME . $dynamic_key, $requests_lock );
 
 		return false;
 	}
 
-	private static function remote_request( $remote_url, $authorize_token ) {//PHP 8 => : \WP_Error|array
+	private static function remote_request( $remote_url, $authorize_token, $current_version ) {//PHP 8 => : \WP_Error|array
 
 		$args = [
 			'headers'   => [
@@ -110,14 +110,17 @@ class API extends Init {
 
 		$new_response = [];
 
-		$new_response['new_version']   = self::check_version_name($response['tag_name']);
+		//$new_response['version']   = self::check_version_name($response['tag_name']);
+		//$new_response['version']       = $current_version;
+		$new_response['version']       = self::check_version_name( $response['tag_name'] );
+		$new_response['new_version']   = self::check_version_name( $response['tag_name'] );
 		$new_response['creation']      = date( 'Y-m-d H:i:s', strtotime( $response['published_at'] ) );
 		$new_response['download_link'] = add_query_arg( 'access_token', $authorize_token, $response['zipball_url'] );
 		$new_response['branch']        = $response['target_commitish'];
 
 		//FIXME:: Add this feature on next release
 		$new_response['website_url']  = $response['html_url'];
-		$new_response['type']         = 'github-plugin';
+		$new_response['type']         = 'plugin';
 		$new_response['body']         = $response['body'];
 		$new_response['requires']     = '6.0';
 		$new_response['tested']       = '6.1.1';
