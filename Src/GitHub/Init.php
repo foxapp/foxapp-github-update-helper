@@ -129,8 +129,7 @@ class Init {
 				__( 'GitHub Update Helper Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
 				__( 'GitHub Settings', FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN ),
 				'manage_options',
-				'foxapp-richprize-casino-api/foxapp-github-update-helper',
-				//$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN,
+				$this->parent_page_slug . '/' . FOX_APP_GITHUB_UPDATE_HELPER_DOMAIN,
 				[ $this, 'render_plugin_settings_administration' ]
 			);
         }
